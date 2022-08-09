@@ -139,11 +139,15 @@ export async function postDeploy(
     // Obtain the lock data with detailsOnly set to true - ie we will not alter the lock
     const lockData = await lock(octokit, context, null, null, false, true)
     // If the lock is sticky, we will not remove it
-    if (lockData.sticky) {
-      core.info('sticky lock detected, will not remove lock')
-    } else if (lockData.sticky === false) {
-      // Remove the lock - use silent mode
-      await unlock(octokit, context, null, true)
+    if (environment !== 'canary') {
+      if (lockData.sticky) {
+        core.info('sticky lock detected, will not remove lock')
+      } else if (lockData.sticky === false) {
+        // Remove the lock - use silent mode, if its not canary
+        await unlock(octokit, context, null, true)
+      }
+    } else {
+      core.info('Canary deploy, not removing lock.')
     }
 
     return 'success - noop'
@@ -162,11 +166,15 @@ export async function postDeploy(
   // Obtain the lock data with detailsOnly set to true - ie we will not alter the lock
   const lockData = await lock(octokit, context, null, null, false, true)
   // If the lock is sticky, we will not remove it
-  if (lockData.sticky) {
-    core.info('sticky lock detected, will not remove lock')
-  } else if (lockData.sticky === false) {
-    // Remove the lock - use silent mode
-    await unlock(octokit, context, null, true)
+  if (environment !== 'canary') {
+    if (lockData.sticky) {
+      core.info('sticky lock detected, will not remove lock')
+    } else if (lockData.sticky === false) {
+      // Remove the lock - use silent mode
+      await unlock(octokit, context, null, true)
+    }
+  } else {
+    core.info('Canary deploy, not removing lock.')
   }
 
   // If the post deploy comment logic completes successfully, return

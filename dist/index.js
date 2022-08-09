@@ -8959,6 +8959,8 @@ async function reactEmote(reaction, context, octokit) {
 }
 
 ;// CONCATENATED MODULE: ./src/functions/action-status.js
+
+
 // Default failure reaction
 const thumbsDown = '-1'
 // Default success reaction
@@ -9015,12 +9017,19 @@ async function actionStatus(
     content: reaction
   })
 
-  // remove the initial reaction on the IssueOp comment that triggered this action
-  await octokit.rest.reactions.deleteForIssueComment({
-    ...context.repo,
-    comment_id: context.payload.comment.id,
-    reaction_id: reactionId
-  })
+  try {
+    // remove the initial reaction on the IssueOp comment that triggered this action
+    await octokit.rest.reactions.deleteForIssueComment({
+      ...context.repo,
+      comment_id: context.payload.comment.id,
+      reaction_id: reactionId
+    })
+  } catch (error) {
+    // Ignore 404's as they are expected
+    if (error.status !== 404) {
+      throw error
+    }
+  }
 }
 
 ;// CONCATENATED MODULE: ./src/functions/environment-targets.js
@@ -10212,11 +10221,15 @@ async function postDeploy(
     // Obtain the lock data with detailsOnly set to true - ie we will not alter the lock
     const lockData = await lock(octokit, context, null, null, false, true)
     // If the lock is sticky, we will not remove it
-    if (lockData.sticky) {
-      core.info('sticky lock detected, will not remove lock')
-    } else if (lockData.sticky === false) {
-      // Remove the lock - use silent mode
-      await unlock(octokit, context, null, true)
+    if (environment !== 'canary') {
+      if (lockData.sticky) {
+        core.info('sticky lock detected, will not remove lock')
+      } else if (lockData.sticky === false) {
+        // Remove the lock - use silent mode, if its not canary
+        await unlock(octokit, context, null, true)
+      }
+    } else {
+      core.info('Canary deploy, not removing lock.')
     }
 
     return 'success - noop'
@@ -10235,11 +10248,15 @@ async function postDeploy(
   // Obtain the lock data with detailsOnly set to true - ie we will not alter the lock
   const lockData = await lock(octokit, context, null, null, false, true)
   // If the lock is sticky, we will not remove it
-  if (lockData.sticky) {
-    core.info('sticky lock detected, will not remove lock')
-  } else if (lockData.sticky === false) {
-    // Remove the lock - use silent mode
-    await unlock(octokit, context, null, true)
+  if (environment !== 'canary') {
+    if (lockData.sticky) {
+      core.info('sticky lock detected, will not remove lock')
+    } else if (lockData.sticky === false) {
+      // Remove the lock - use silent mode
+      await unlock(octokit, context, null, true)
+    }
+  } else {
+    core.info('Canary deploy, not removing lock.')
   }
 
   // If the post deploy comment logic completes successfully, return
@@ -10594,7 +10611,7 @@ async function run() {
 
     // Aquire the branch-deploy lock for non-sticky requests
     // If the lock request fails, exit the Action
-    const sticky = false
+    const sticky = true
     if (
       !(await lock(
         octokit,
