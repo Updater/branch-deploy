@@ -1,3 +1,5 @@
+import * as core from '@actions/core'
+
 // Default failure reaction
 const thumbsDown = '-1'
 // Default success reaction
@@ -54,10 +56,17 @@ export async function actionStatus(
     content: reaction
   })
 
-  // remove the initial reaction on the IssueOp comment that triggered this action
-  await octokit.rest.reactions.deleteForIssueComment({
-    ...context.repo,
-    comment_id: context.payload.comment.id,
-    reaction_id: reactionId
-  })
+  try {
+    // remove the initial reaction on the IssueOp comment that triggered this action
+    await octokit.rest.reactions.deleteForIssueComment({
+      ...context.repo,
+      comment_id: context.payload.comment.id,
+      reaction_id: reactionId
+    })
+  } catch (error) {
+    // Ignore 404's as they are expected
+    if (error.status !== 404) {
+      throw error
+    }
+  }
 }

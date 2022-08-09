@@ -291,7 +291,7 @@ export async function run() {
 
     // Aquire the branch-deploy lock for non-sticky requests
     // If the lock request fails, exit the Action
-    const sticky = false
+    const sticky = true
     if (
       !(await lock(
         octokit,
